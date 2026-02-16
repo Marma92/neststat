@@ -13,7 +13,9 @@ describe('BuildingsController', () => {
 
   beforeEach(async () => {
     service = {
-      findAllForUser: jest.fn().mockResolvedValue([{ id: 1, name: 'Building' }]),
+      findAllForUser: jest
+        .fn()
+        .mockResolvedValue([{ id: 1, name: 'Building' }]),
       findOne: jest.fn().mockResolvedValue({ id: 1, name: 'Building' }),
       create: jest.fn().mockResolvedValue({ id: 1, name: 'Building' }),
       update: jest.fn().mockResolvedValue({ id: 1, name: 'Updated' }),
@@ -46,7 +48,10 @@ describe('BuildingsController', () => {
 
   describe('create', () => {
     it('should create building for admin', () => {
-      const result = controller.create({ name: 'New', companyId: 1 }, mockAdmin as any);
+      const result = controller.create(
+        { name: 'New', companyId: 1 },
+        mockAdmin as any,
+      );
       expect(result).resolves.toEqual({ id: 1, name: 'Building' });
     });
 
@@ -59,7 +64,11 @@ describe('BuildingsController', () => {
 
   describe('update', () => {
     it('should update building for admin', () => {
-      const result = controller.update(1, { name: 'Updated' }, mockAdmin as any);
+      const result = controller.update(
+        1,
+        { name: 'Updated' },
+        mockAdmin as any,
+      );
       expect(result).resolves.toEqual({ id: 1, name: 'Updated' });
     });
 
@@ -77,7 +86,9 @@ describe('BuildingsController', () => {
     });
 
     it('should throw ForbiddenException for non-admin', () => {
-      expect(() => controller.delete(1, mockUser as any)).toThrow(ForbiddenException);
+      expect(() => controller.delete(1, mockUser as any)).toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -101,9 +112,9 @@ describe('BuildingsController', () => {
     });
 
     it('should throw ForbiddenException for non-admin', () => {
-      expect(() =>
-        controller.removeUser(1, 2, mockUser as any),
-      ).toThrow(ForbiddenException);
+      expect(() => controller.removeUser(1, 2, mockUser as any)).toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

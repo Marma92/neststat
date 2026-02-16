@@ -35,7 +35,9 @@ describe('CompaniesController', () => {
     });
 
     it('should throw ForbiddenException for non-admin', () => {
-      expect(() => controller.findAll(mockUserNonAdmin as any)).toThrow(ForbiddenException);
+      expect(() => controller.findAll(mockUserNonAdmin as any)).toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -46,7 +48,9 @@ describe('CompaniesController', () => {
     });
 
     it('should throw ForbiddenException for non-admin', () => {
-      expect(() => controller.create({ name: 'New' }, mockUserNonAdmin as any)).toThrow(ForbiddenException);
+      expect(() =>
+        controller.create({ name: 'New' }, mockUserNonAdmin as any),
+      ).toThrow(ForbiddenException);
     });
   });
 
@@ -57,7 +61,9 @@ describe('CompaniesController', () => {
     });
 
     it('should throw ForbiddenException for non-admin', () => {
-      expect(() => controller.update(1, { name: 'Updated' }, mockUserNonAdmin as any)).toThrow(ForbiddenException);
+      expect(() =>
+        controller.update(1, { name: 'Updated' }, mockUserNonAdmin as any),
+      ).toThrow(ForbiddenException);
     });
   });
 
@@ -68,7 +74,9 @@ describe('CompaniesController', () => {
     });
 
     it('should throw ForbiddenException for non-admin', () => {
-      expect(() => controller.delete(1, mockUserNonAdmin as any)).toThrow(ForbiddenException);
+      expect(() => controller.delete(1, mockUserNonAdmin as any)).toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

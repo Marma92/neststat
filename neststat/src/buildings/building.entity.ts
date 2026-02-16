@@ -4,10 +4,12 @@ import {
   Column,
   ManyToOne,
   ManyToMany,
+  OneToMany,
   JoinTable,
 } from 'typeorm';
 import { Company } from '../companies/company.entity';
 import { User } from '../users/user.entity';
+import { Story } from '../stories/story.entity';
 
 @Entity()
 export class Building {
@@ -33,4 +35,7 @@ export class Building {
     inverseJoinColumn: { name: 'user_id', referencedColumnName: 'id' },
   })
   users: User[];
+
+  @OneToMany(() => Story, (story) => story.building)
+  stories: Story[];
 }
