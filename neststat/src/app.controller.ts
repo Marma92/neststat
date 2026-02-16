@@ -13,13 +13,24 @@ export class AppController {
 
   /**
    * Health check endpoint to verify the server is running
-   * @returns Server status message
+   * @returns Server health status with uptime and version info
    */
   @Public()
-  @Get()
+  @Get('health')
   @ApiOperation({ summary: 'Health check endpoint' })
-  @ApiResponse({ status: 200, description: 'Server is running' })
-  getHello(): string {
-    return this.appService.getHello();
+  @ApiResponse({
+    status: 200,
+    description: 'Server health status',
+    schema: {
+      properties: {
+        status: { type: 'string', example: 'ok' },
+        timestamp: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
+        uptime: { type: 'number', example: 3600 },
+        version: { type: 'string', example: '1.0.0' },
+      },
+    },
+  })
+  getHealth() {
+    return this.appService.getHealth();
   }
 }

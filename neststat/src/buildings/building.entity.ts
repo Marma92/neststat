@@ -6,6 +6,8 @@ import {
   ManyToMany,
   OneToMany,
   JoinTable,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Company } from '../companies/company.entity';
 import { User } from '../users/user.entity';
@@ -38,4 +40,10 @@ export class Building {
 
   @OneToMany(() => Story, (story) => story.building)
   stories: Story[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

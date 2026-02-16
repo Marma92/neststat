@@ -1,7 +1,6 @@
-import { Controller, Post, Body, UsePipes, Req } from '@nestjs/common';
+import { Controller, Post, Body, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
-import { ValidationPipe } from '../validation.pipe';
 import { Public } from './decorators/public.decorator';
 import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
@@ -22,7 +21,6 @@ export class AuthController {
    */
   @Public()
   @Post('login')
-  @UsePipes(new ValidationPipe())
   @ApiOperation({ summary: 'Login user' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({ status: 201, description: 'User logged in successfully' })
@@ -44,7 +42,6 @@ export class AuthController {
    */
   @Public()
   @Post('register')
-  @UsePipes(new ValidationPipe())
   @ApiOperation({ summary: 'Register new user' })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({ status: 201, description: 'User registered successfully' })

@@ -4,6 +4,8 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Building } from '../buildings/building.entity';
 import { Room } from '../rooms/room.entity';
@@ -27,4 +29,10 @@ export class Story {
 
   @OneToMany(() => Room, (room) => room.story)
   rooms: Room[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

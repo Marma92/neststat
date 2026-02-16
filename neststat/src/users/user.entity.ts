@@ -4,6 +4,8 @@ import {
   Column,
   ManyToOne,
   ManyToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Company } from '../companies/company.entity';
 import { Building } from '../buildings/building.entity';
@@ -36,4 +38,10 @@ export class User {
 
   @ManyToMany(() => Building, (building) => building.users)
   buildings: Building[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
