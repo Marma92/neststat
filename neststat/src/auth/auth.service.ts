@@ -1,12 +1,12 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
-import { User } from '../users/user.entity';
+import { User, UserRole } from '../users/user.entity';
 import * as bcrypt from 'bcrypt';
-
-interface LoginDto {
-  username: string;
-  password: string;
-}
+import { LoginDto, RegisterDto } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -19,37 +19,63 @@ export class AuthService {
     const user = await this.usersService.findOne(username);
     if (user && (await bcrypt.compare(pass, user.password))) {
       const { password, ...result } = user;
+      void password;
       return result;
     }
     return null;
   }
 
   async login(user: LoginDto) {
-    if (!user.username || !user.password) {
-      throw new BadRequestException('Username and password are required');
+    try {
+      const validUser = await this.validateUser(user.username, user.password);
+      if (!validUser) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      return {
+        message: 'Login successful',
+        user: {
+          id: validUser.id,
+          username: validUser.username,
+          role: validUser.role,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('An error occurred during login');
     }
-    const validUser = await this.validateUser(user.username, user.password);
-    if (!validUser) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    return {
-      message: 'Login successful',
-      user: { id: validUser.id, username: validUser.username },
-    };
   }
 
-  async register(username: string, password: string) {
-    if (!username || !password) {
-      throw new BadRequestException('Username and password are required');
+  async register(data: RegisterDto) {
+    try {
+      const existing = await this.usersService.findOne(data.username);
+      if (existing) {
+        throw new UnauthorizedException('User already exists');
+      }
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const role = data.role ?? UserRole.USER;
+      const user = await this.usersService.create(
+        data.username,
+        hashedPassword,
+        role,
+      );
+      const { password: pwd, ...result } = user;
+      void pwd;
+      return { message: 'Registration successful', user: result };
+    } catch (error) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An error occurred during registration',
+      );
     }
-    const existing = await this.usersService.findOne(username);
-    if (existing) {
-      throw new UnauthorizedException('User already exists');
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await this.usersService.create(username, hashedPassword);
-    const { password: pwd, ...result } = user;
-    void pwd;
-    return { message: 'Registration successful', user: result };
   }
 }
