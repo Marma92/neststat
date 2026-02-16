@@ -2,13 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import session from 'express-session';
 import type { Request, Response, NextFunction } from 'express';
 
 const SESSION_MAX_AGE = 3 * 24 * 60 * 60 * 1000;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
+  // Use Winston logger for NestJS
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   app.enableCors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
@@ -55,6 +61,13 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+
+  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  logger.log(`Application is running on: http://localhost:${port}`);
+  logger.log(`Swagger documentation available at: http://localhost:${port}/api`);
+  logger.log(`Health check available at: http://localhost:${port}/health`);
+  logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 void bootstrap();

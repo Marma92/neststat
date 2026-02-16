@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
@@ -9,6 +9,8 @@ import { CompaniesModule } from './companies/companies.module';
 import { BuildingsModule } from './buildings/buildings.module';
 import { StoriesModule } from './stories/stories.module';
 import { RoomsModule } from './rooms/rooms.module';
+import { LoggerModule } from './logger/logger.module';
+import { HttpLoggerMiddleware } from './logger/http-logger.middleware';
 import { User } from './users/user.entity';
 import { Company } from './companies/company.entity';
 import { Building } from './buildings/building.entity';
@@ -24,6 +26,7 @@ import { AuthGuard } from './auth/guards/auth.guard';
       entities: [User, Company, Building, Story, Room],
       synchronize: true,
     }),
+    LoggerModule,
     AuthModule,
     UsersModule,
     CompaniesModule,
@@ -40,4 +43,8 @@ import { AuthGuard } from './auth/guards/auth.guard';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HttpLoggerMiddleware).forRoutes('*');
+  }
+}
