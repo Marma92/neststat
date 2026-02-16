@@ -5,7 +5,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { CompaniesModule } from './companies/companies.module';
+import { BuildingsModule } from './buildings/buildings.module';
 import { User } from './users/user.entity';
+import { Company } from './companies/company.entity';
+import { Building } from './buildings/building.entity';
 import { AuthGuard } from './auth/guards/auth.guard';
 
 @Module({
@@ -13,11 +17,13 @@ import { AuthGuard } from './auth/guards/auth.guard';
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [User],
+      entities: [User, Company, Building],
       synchronize: true,
     }),
     AuthModule,
     UsersModule,
+    CompaniesModule,
+    BuildingsModule,
   ],
   controllers: [AppController],
   providers: [
