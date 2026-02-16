@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import session from 'express-session';
 import type { Request, Response, NextFunction } from 'express';
 
@@ -29,6 +30,16 @@ async function bootstrap() {
     }
     next();
   });
+
+  const config = new DocumentBuilder()
+    .setTitle('NestStat API')
+    .setDescription('The NestStat API description')
+    .setVersion('1.0')
+    .addCookieAuth('connect.sid')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
 }
