@@ -43,6 +43,23 @@ export class RoomsController {
     return this.roomsService.create(storyId, body, user.id, user.role);
   }
 
+  @Post('bulk')
+  bulkCreate(
+    @Param('storyId', ParseIntPipe) storyId: number,
+    @Body()
+    body: {
+      rooms: Array<{ name: string; description?: string; capacity?: number }>;
+    },
+    @AuthUser() user: User,
+  ) {
+    return this.roomsService.bulkCreate(
+      storyId,
+      body.rooms,
+      user.id,
+      user.role,
+    );
+  }
+
   @Put(':id')
   update(
     @Param('buildingId', ParseIntPipe) buildingId: number,

@@ -57,6 +57,27 @@ export class RoomsService {
     return this.roomsRepository.save(room);
   }
 
+  async bulkCreate(
+    storyId: number,
+    rooms: Array<{ name: string; description?: string; capacity?: number }>,
+    userId: number,
+    userRole: UserRole,
+  ): Promise<Room[]> {
+    if (userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only administrators can create rooms');
+    }
+    await this.storiesService.findOne(storyId, userId);
+    const newRooms = this.roomsRepository.create(
+      rooms.map((r) => ({
+        name: r.name,
+        description: r.description,
+        capacity: r.capacity ?? 1,
+        storyId,
+      })),
+    );
+    return this.roomsRepository.save(newRooms);
+  }
+
   async update(
     id: number,
     userId: number,
