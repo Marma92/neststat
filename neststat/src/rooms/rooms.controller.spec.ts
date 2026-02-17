@@ -36,6 +36,23 @@ describe('RoomsController', () => {
             return Promise.resolve({ id: 1, ...data });
           },
         ),
+      bulkCreate: jest
+        .fn()
+        .mockImplementation(
+          (
+            storyId: number,
+            rooms: Array<{ name: string; capacity?: number }>,
+            userId: number,
+            userRole: UserRole,
+          ) => {
+            if (userRole !== UserRole.ADMIN) {
+              return Promise.reject(
+                new ForbiddenException('Only administrators can create rooms'),
+              );
+            }
+            return Promise.resolve(rooms.map((r, i) => ({ id: i + 1, ...r })));
+          },
+        ),
       update: jest
         .fn()
         .mockImplementation(
@@ -104,6 +121,26 @@ describe('RoomsController', () => {
     it('should throw ForbiddenException for non-admin', async () => {
       await expect(
         controller.create(1, { name: 'Room 1', capacity: 10 }, mockUser as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('bulkCreate', () => {
+    it('should create multiple rooms for admin', () => {
+      const rooms = [
+        { name: 'Room 1', capacity: 10 },
+        { name: 'Room 2', capacity: 5 },
+      ];
+      const result = controller.bulkCreate(1, { rooms }, mockAdmin as any);
+      expect(result).resolves.toEqual([
+        { id: 1, name: 'Room 1', capacity: 10 },
+        { id: 2, name: 'Room 2', capacity: 5 },
+      ]);
+    });
+
+    it('should throw ForbiddenException for non-admin', async () => {
+      await expect(
+        controller.bulkCreate(1, { rooms: [{ name: 'Room 1' }] }, mockUser as any),
       ).rejects.toThrow(ForbiddenException);
     });
   });
