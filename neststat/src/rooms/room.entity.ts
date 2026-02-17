@@ -3,10 +3,12 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Story } from '../stories/story.entity';
+import { Reservation } from '../reservations/reservation.entity';
 
 @Entity()
 export class Room {
@@ -27,6 +29,9 @@ export class Room {
 
   @Column()
   storyId: number;
+
+  @OneToMany(() => Reservation, (reservation) => reservation.room)
+  reservations: Reservation[];
 
   @CreateDateColumn()
   createdAt: Date;

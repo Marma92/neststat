@@ -4,11 +4,13 @@ import {
   Column,
   ManyToOne,
   ManyToMany,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Company } from '../companies/company.entity';
 import { Building } from '../buildings/building.entity';
+import { Reservation } from '../reservations/reservation.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -38,6 +40,9 @@ export class User {
 
   @ManyToMany(() => Building, (building) => building.users)
   buildings: Building[];
+
+  @OneToMany(() => Reservation, (reservation) => reservation.organizer)
+  reservations: Reservation[];
 
   @CreateDateColumn()
   createdAt: Date;
