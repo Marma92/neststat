@@ -10,6 +10,72 @@ import { StoriesService } from '../stories/stories.service';
 import { BuildingsService } from '../buildings/buildings.service';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
+// Test constants for time calculations
+const ONE_MINUTE_MS = 60 * 1000;
+const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+
+// Test data constants
+const TEST_USER_ID = 1;
+const TEST_ROOM_ID = 1;
+const TEST_BUILDING_ID = 1;
+const TEST_RESERVATION_ID = 1;
+const DEFAULT_ROOM_CAPACITY = 5;
+const SMALL_ROOM_CAPACITY = 2;
+
+/**
+ * Helper function to create a mock query builder
+ */
+const createMockQueryBuilder = (count = 0) => ({
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  getCount: jest.fn().mockResolvedValue(count),
+});
+
+/**
+ * Helper function to get a future date for valid reservations
+ * @param daysAhead Number of days in the future
+ * @param additionalHours Additional hours to add
+ */
+const getFutureDate = (daysAhead = 1, additionalHours = 0): string => {
+  return new Date(Date.now() + (daysAhead * ONE_DAY_MS) + (additionalHours * ONE_HOUR_MS)).toISOString();
+};
+
+/**
+ * Helper function to get a past date for invalid reservations
+ * @param hoursAgo Number of hours in the past
+ */
+const getPastDate = (hoursAgo = 1): string => {
+  return new Date(Date.now() - (hoursAgo * ONE_HOUR_MS)).toISOString();
+};
+
+/**
+ * Helper function to create valid reservation data
+ */
+const createValidReservationData = (overrides = {}) => ({
+  title: 'Meeting',
+  startTime: getFutureDate(1, 0),
+  endTime: getFutureDate(1, 1),
+  ...overrides,
+});
+
+/**
+ * Helper function to setup successful reservation mocks
+ */
+const setupSuccessfulReservationMocks = (
+  mockRoomRepo: any,
+  mockBuildingsService: any,
+  mockReservationRepo: any,
+  mockUserRepo: any,
+  room: any = { id: TEST_ROOM_ID, capacity: DEFAULT_ROOM_CAPACITY, story: { buildingId: TEST_BUILDING_ID } },
+  conflictCount = 0,
+) => {
+  mockRoomRepo.findOne.mockResolvedValue(room);
+  mockBuildingsService.findOne.mockResolvedValue({});
+  mockReservationRepo.createQueryBuilder.mockReturnValue(createMockQueryBuilder(conflictCount));
+  mockUserRepo.find.mockResolvedValue([]);
+};
+
 describe('ReservationsService', () => {
   let service: ReservationsService;
   let reservationRepo: Partial<Repository<Reservation>>;
@@ -69,12 +135,12 @@ describe('ReservationsService', () => {
 
   describe('findAllForRoom', () => {
     it('should return reservations for a room', async () => {
-      const mockReservations = [{ id: 1, title: 'Meeting' }];
-      mockRoomRepo.findOne.mockResolvedValue({ id: 1, story: { buildingId: 1 } });
+      const mockReservations = [{ id: TEST_RESERVATION_ID, title: 'Meeting' }];
+      mockRoomRepo.findOne.mockResolvedValue({ id: TEST_ROOM_ID, story: { buildingId: TEST_BUILDING_ID } });
       mockBuildingsService.findOne.mockResolvedValue({});
       mockReservationRepo.find.mockResolvedValue(mockReservations);
 
-      const result = await service.findAllForRoom(1, 1);
+      const result = await service.findAllForRoom(TEST_ROOM_ID, TEST_USER_ID);
 
       expect(result).toEqual(mockReservations);
     });
@@ -82,17 +148,21 @@ describe('ReservationsService', () => {
     it('should throw NotFoundException when room not found', async () => {
       mockRoomRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.findAllForRoom(1, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.findAllForRoom(TEST_ROOM_ID, TEST_USER_ID)).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('findOne', () => {
     it('should return a reservation by id', async () => {
-      const mockReservation = { id: 1, title: 'Meeting', room: { story: { buildingId: 1 } } };
+      const mockReservation = { 
+        id: TEST_RESERVATION_ID, 
+        title: 'Meeting', 
+        room: { story: { buildingId: TEST_BUILDING_ID } } 
+      };
       mockReservationRepo.findOne.mockResolvedValue(mockReservation);
       mockBuildingsService.findOne.mockResolvedValue({});
 
-      const result = await service.findOne(1, 1);
+      const result = await service.findOne(TEST_RESERVATION_ID, TEST_USER_ID);
 
       expect(result).toEqual(mockReservation);
     });
@@ -100,107 +170,138 @@ describe('ReservationsService', () => {
     it('should throw NotFoundException when reservation not found', async () => {
       mockReservationRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.findOne(999, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(999, TEST_USER_ID)).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('create', () => {
-    const mockRoom = { id: 1, capacity: 5, story: { buildingId: 1 } };
-    const validData = {
-      title: 'Meeting',
-      startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
+    const mockRoom = { 
+      id: TEST_ROOM_ID, 
+      capacity: DEFAULT_ROOM_CAPACITY, 
+      story: { buildingId: TEST_BUILDING_ID } 
     };
+    const validData = createValidReservationData();
 
     beforeEach(() => {
-      mockRoomRepo.findOne.mockResolvedValue(mockRoom);
-      mockBuildingsService.findOne.mockResolvedValue({});
-      mockReservationRepo.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(0),
-      });
-      mockUserRepo.find.mockResolvedValue([]);
+      setupSuccessfulReservationMocks(
+        mockRoomRepo,
+        mockBuildingsService,
+        mockReservationRepo,
+        mockUserRepo,
+        mockRoom,
+      );
     });
 
     it('should create a reservation', async () => {
-      const savedReservation = { id: 1, ...validData, organizerId: 1, invitees: [] };
+      const savedReservation = { 
+        id: TEST_RESERVATION_ID, 
+        ...validData, 
+        organizerId: TEST_USER_ID, 
+        invitees: [] 
+      };
       mockReservationRepo.create.mockReturnValue(savedReservation);
       mockReservationRepo.save.mockResolvedValue(savedReservation);
       mockReservationRepo.findOne.mockResolvedValue(savedReservation);
 
-      const result = await service.create(1, validData, 1, UserRole.USER);
+      const result = await service.create(TEST_ROOM_ID, validData, TEST_USER_ID, UserRole.USER);
 
       expect(result.reservation).toBeDefined();
       expect(result.reservation.title).toBe('Meeting');
     });
 
     it('should return warning when capacity exceeded', async () => {
-      const roomWithSmallCapacity = { ...mockRoom, capacity: 2 };
-      mockRoomRepo.findOne.mockResolvedValue(roomWithSmallCapacity);
+      const roomWithSmallCapacity = { ...mockRoom, capacity: SMALL_ROOM_CAPACITY };
+      setupSuccessfulReservationMocks(
+        mockRoomRepo,
+        mockBuildingsService,
+        mockReservationRepo,
+        mockUserRepo,
+        roomWithSmallCapacity,
+      );
+      
       mockUserRepo.find.mockResolvedValue([
         { id: 2 },
         { id: 3 },
         { id: 4 },
       ]);
 
-      const dataWithInvitees = {
-        ...validData,
-        invitees: [2, 3, 4],
-      };
+      const dataWithInvitees = createValidReservationData({ invitees: [2, 3, 4] });
 
-      const savedReservation = { id: 1, ...dataWithInvitees, organizerId: 1, invitees: [] };
+      const savedReservation = { 
+        id: TEST_RESERVATION_ID, 
+        ...dataWithInvitees, 
+        organizerId: TEST_USER_ID, 
+        invitees: [] 
+      };
       mockReservationRepo.create.mockReturnValue(savedReservation);
       mockReservationRepo.save.mockResolvedValue(savedReservation);
       mockReservationRepo.findOne.mockResolvedValue(savedReservation);
 
-      const result = await service.create(1, dataWithInvitees, 1, UserRole.USER);
+      const result = await service.create(TEST_ROOM_ID, dataWithInvitees, TEST_USER_ID, UserRole.USER);
 
       expect(result.warning).toContain('Warning');
     });
 
     it('should throw BadRequestException when start time is in the past', async () => {
-      const pastData = {
-        title: 'Meeting',
-        startTime: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-        endTime: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      };
+      const pastData = createValidReservationData({
+        startTime: getPastDate(1),
+        endTime: getPastDate(0.5),
+      });
 
-      await expect(service.create(1, pastData, 1, UserRole.USER)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.create(TEST_ROOM_ID, pastData, TEST_USER_ID, UserRole.USER)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when end time is before start time', async () => {
-      const invalidData = {
-        title: 'Meeting',
-        startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        endTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      };
+      const invalidData = createValidReservationData({
+        startTime: getFutureDate(1, 1),
+        endTime: getFutureDate(1, 0),
+      });
 
-      await expect(service.create(1, invalidData, 1, UserRole.USER)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.create(TEST_ROOM_ID, invalidData, TEST_USER_ID, UserRole.USER)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ForbiddenException when room is already booked', async () => {
-      mockReservationRepo.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(1),
-      });
+      setupSuccessfulReservationMocks(
+        mockRoomRepo,
+        mockBuildingsService,
+        mockReservationRepo,
+        mockUserRepo,
+        mockRoom,
+        1, // conflictCount = 1 means room is booked
+      );
 
-      await expect(service.create(1, validData, 1, UserRole.USER)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.create(TEST_ROOM_ID, validData, TEST_USER_ID, UserRole.USER)
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw NotFoundException when invitee user IDs do not exist', async () => {
+      const dataWithInvitees = createValidReservationData({ invitees: [2, 3, 999] });
+      
+      // Mock that only 2 out of 3 invitees exist
+      mockUserRepo.find.mockResolvedValue([{ id: 2 }, { id: 3 }]);
+
+      await expect(
+        service.create(TEST_ROOM_ID, dataWithInvitees, TEST_USER_ID, UserRole.USER)
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('update', () => {
     const existingReservation = {
-      id: 1,
+      id: TEST_RESERVATION_ID,
       title: 'Meeting',
       description: 'Old description',
-      startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      endTime: new Date(Date.now() + 25 * 60 * 60 * 1000),
-      roomId: 1,
-      organizerId: 1,
+      startTime: new Date(Date.now() + ONE_DAY_MS),
+      endTime: new Date(Date.now() + ONE_DAY_MS + ONE_HOUR_MS),
+      roomId: TEST_ROOM_ID,
+      organizerId: TEST_USER_ID,
       invitees: [],
-      room: { story: { buildingId: 1 } },
+      room: { story: { buildingId: TEST_BUILDING_ID } },
     };
 
     beforeEach(() => {
@@ -216,22 +317,26 @@ describe('ReservationsService', () => {
       mockReservationRepo.save.mockResolvedValue(updatedReservation);
       mockReservationRepo.findOne.mockResolvedValue(updatedReservation);
 
-      const result = await service.update(1, { title: 'Updated Title' }, 1);
+      const result = await service.update(TEST_RESERVATION_ID, { title: 'Updated Title' }, TEST_USER_ID);
 
       expect(result.reservation.title).toBe('Updated Title');
     });
 
     it('should throw ForbiddenException when user is not organizer', async () => {
-      await expect(service.update(1, { title: 'New Title' }, 999)).rejects.toThrow(ForbiddenException);
+      const unauthorizedUserId = 999;
+      
+      await expect(
+        service.update(TEST_RESERVATION_ID, { title: 'New Title' }, unauthorizedUserId)
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('delete', () => {
     const existingReservation = {
-      id: 1,
+      id: TEST_RESERVATION_ID,
       title: 'Meeting',
-      room: { story: { buildingId: 1 } },
-      organizerId: 1,
+      room: { story: { buildingId: TEST_BUILDING_ID } },
+      organizerId: TEST_USER_ID,
     };
 
     beforeEach(() => {
@@ -242,21 +347,30 @@ describe('ReservationsService', () => {
     it('should delete a reservation', async () => {
       mockReservationRepo.remove.mockResolvedValue(existingReservation);
 
-      await service.delete(1, 1);
+      await service.delete(TEST_RESERVATION_ID, TEST_USER_ID);
 
       expect(mockReservationRepo.remove).toHaveBeenCalledWith(existingReservation);
     });
 
     it('should throw ForbiddenException when user is not organizer', async () => {
-      await expect(service.delete(1, 999)).rejects.toThrow(ForbiddenException);
+      const unauthorizedUserId = 999;
+      
+      await expect(
+        service.delete(TEST_RESERVATION_ID, unauthorizedUserId)
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('getAvailabilities', () => {
-    const mockRoom = { id: 1, name: 'Room 101', capacity: 10, story: { buildingId: 1 } };
+    const mockRoom = { 
+      id: TEST_ROOM_ID, 
+      name: 'Room 101', 
+      capacity: 10, 
+      story: { buildingId: TEST_BUILDING_ID } 
+    };
     const mockReservations = [
       {
-        id: 1,
+        id: TEST_RESERVATION_ID,
         title: 'Meeting 1',
         startTime: new Date('2024-01-15T10:00:00Z'),
         endTime: new Date('2024-01-15T11:00:00Z'),
@@ -270,7 +384,7 @@ describe('ReservationsService', () => {
     });
 
     it('should return room availabilities', async () => {
-      const result = await service.getAvailabilities(1, 1);
+      const result = await service.getAvailabilities(TEST_ROOM_ID, TEST_USER_ID);
 
       expect(result.room).toEqual(mockRoom);
       expect(result.reservations).toEqual(mockReservations);
@@ -278,9 +392,96 @@ describe('ReservationsService', () => {
     });
 
     it('should filter by date range', async () => {
-      await service.getAvailabilities(1, 1, '2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      const startDate = '2024-01-15T00:00:00Z';
+      const endDate = '2024-01-15T23:59:59Z';
+
+      await service.getAvailabilities(TEST_ROOM_ID, TEST_USER_ID, startDate, endDate);
 
       expect(mockReservationRepo.find).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when room not found', async () => {
+      mockRoomRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getAvailabilities(TEST_ROOM_ID, TEST_USER_ID)
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty invitee list', async () => {
+      const mockRoom = { 
+        id: TEST_ROOM_ID, 
+        capacity: DEFAULT_ROOM_CAPACITY, 
+        story: { buildingId: TEST_BUILDING_ID } 
+      };
+      setupSuccessfulReservationMocks(
+        mockRoomRepo,
+        mockBuildingsService,
+        mockReservationRepo,
+        mockUserRepo,
+        mockRoom,
+      );
+
+      const dataWithEmptyInvitees = createValidReservationData({ invitees: [] });
+      const savedReservation = { 
+        id: TEST_RESERVATION_ID, 
+        ...dataWithEmptyInvitees, 
+        organizerId: TEST_USER_ID, 
+        invitees: [] 
+      };
+      mockReservationRepo.create.mockReturnValue(savedReservation);
+      mockReservationRepo.save.mockResolvedValue(savedReservation);
+      mockReservationRepo.findOne.mockResolvedValue(savedReservation);
+
+      const result = await service.create(
+        TEST_ROOM_ID, 
+        dataWithEmptyInvitees, 
+        TEST_USER_ID, 
+        UserRole.USER
+      );
+
+      expect(result.reservation).toBeDefined();
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('should handle reservation at exact room capacity', async () => {
+      const mockRoom = { 
+        id: TEST_ROOM_ID, 
+        capacity: 3, 
+        story: { buildingId: TEST_BUILDING_ID } 
+      };
+      setupSuccessfulReservationMocks(
+        mockRoomRepo,
+        mockBuildingsService,
+        mockReservationRepo,
+        mockUserRepo,
+        mockRoom,
+      );
+
+      mockUserRepo.find.mockResolvedValue([{ id: 2 }, { id: 3 }]);
+
+      const dataWithInvitees = createValidReservationData({ invitees: [2, 3] });
+      const savedReservation = { 
+        id: TEST_RESERVATION_ID, 
+        ...dataWithInvitees, 
+        organizerId: TEST_USER_ID, 
+        invitees: [] 
+      };
+      mockReservationRepo.create.mockReturnValue(savedReservation);
+      mockReservationRepo.save.mockResolvedValue(savedReservation);
+      mockReservationRepo.findOne.mockResolvedValue(savedReservation);
+
+      const result = await service.create(
+        TEST_ROOM_ID, 
+        dataWithInvitees, 
+        TEST_USER_ID, 
+        UserRole.USER
+      );
+
+      expect(result.reservation).toBeDefined();
+      expect(result.warning).toBeUndefined(); // At capacity, not exceeded
     });
   });
 });
