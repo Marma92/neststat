@@ -9,6 +9,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { BuildingsModule } from './buildings/buildings.module';
 import { StoriesModule } from './stories/stories.module';
 import { RoomsModule } from './rooms/rooms.module';
+import { ReservationsModule } from './reservations/reservations.module';
 import { LoggerModule } from './logger/logger.module';
 import { HttpLoggerMiddleware } from './logger/http-logger.middleware';
 import { User } from './users/user.entity';
@@ -16,6 +17,7 @@ import { Company } from './companies/company.entity';
 import { Building } from './buildings/building.entity';
 import { Story } from './stories/story.entity';
 import { Room } from './rooms/room.entity';
+import { Reservation } from './reservations/reservation.entity';
 import { AuthGuard } from './auth/guards/auth.guard';
 
 @Module({
@@ -23,7 +25,7 @@ import { AuthGuard } from './auth/guards/auth.guard';
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [User, Company, Building, Story, Room],
+      entities: [User, Company, Building, Story, Room, Reservation],
       synchronize: true,
     }),
     LoggerModule,
@@ -33,6 +35,7 @@ import { AuthGuard } from './auth/guards/auth.guard';
     BuildingsModule,
     StoriesModule,
     RoomsModule,
+    ReservationsModule,
   ],
   controllers: [AppController],
   providers: [
