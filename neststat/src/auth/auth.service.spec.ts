@@ -4,10 +4,17 @@ import { UsersService } from '../users/users.service';
 import { User, UserRole } from '../users/user.entity';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: Partial<UsersService>;
+
+  const mockLogger = {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  };
 
   const mockUser: User = {
     id: 1,
@@ -26,6 +33,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: UsersService, useValue: usersService },
+        { provide: WINSTON_MODULE_PROVIDER, useValue: mockLogger },
       ],
     }).compile();
 
